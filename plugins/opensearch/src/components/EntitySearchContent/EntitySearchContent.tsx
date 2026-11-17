@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Button,
   Grid,
-  Typography,
   makeStyles,
 } from '@material-ui/core';
 import Alert from '@material-ui/lab/Alert';

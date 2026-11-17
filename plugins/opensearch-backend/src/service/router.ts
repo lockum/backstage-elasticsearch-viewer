@@ -9,9 +9,6 @@ import {
 import {
   SearchClusterError,
   InstanceNotFoundError,
-  ClusterAuthenticationError,
-  UpstreamClusterError,
-  ValidationError,
 } from './errors';
 import { SearchClusterClient, type Logger } from './client';
 
