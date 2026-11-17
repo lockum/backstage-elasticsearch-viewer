@@ -1,129 +1,169 @@
-# Backstage Elasticsearch & OpenSearch Plugins
+# Backstage OpenSearch & Elasticsearch Plugins
 
-Production-grade Backstage plugin suite for monitoring **Elasticsearch** and **OpenSearch** clusters, index patterns, and health metrics directly from Backstage catalog entities.
+[![Backstage](https://img.shields.io/badge/Backstage-1.24+-blue.svg)](https://backstage.io/)
+[![OpenSearch](https://img.shields.io/badge/OpenSearch-1.x%20%7C%202.x%20%7C%203.x-005EB8.svg)](https://opensearch.org/)
+[![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.x%20%7C%208.x%20%7C%209.x-00BFB3.svg)](https://www.elastic.co/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+
+A production-grade, enterprise-ready Backstage plugin suite for monitoring and visualizing **OpenSearch (1.x, 2.x, 3.x)** and **Elasticsearch (7.x, 8.x, 9.x)** clusters directly within your Backstage Software Catalog.
+
+---
+
+## Visual Tour
+
+### 1. Catalog Component Overview Health Card
+Displays real-time cluster health, node and shard topology, disk storage usage, and matched index patterns directly on the entity's Overview tab:
+
+![Overview Health Card](docs/images/overview-health-card.png)
+
+### 2. Dedicated Search Cluster Dashboard
+Deep-dive inspection tab (`/search-cluster`) with resource telemetry, JVM heap metrics, and recent indices sorting:
+
+![Search Cluster Dashboard](docs/images/search-cluster-tab.jpg)
+
+---
+
+## Key Features
+
+- **Multi-Engine Support**: Seamless compatibility with both OpenSearch (`1.x`, `2.x`, `3.x`) and Elasticsearch (`7.x`, `8.x`, `9.x`).
+- **Dynamic Auto-Detection**: Automatically detects cluster distribution and engine versions without manual configuration flags.
+- **Backstage New Frontend & Backend Systems**:
+  - Full support for Backstage's **New Backend System** (`createBackendPlugin`).
+  - Full support for Backstage's **New Frontend System** (`createFrontendPlugin`, `EntityCardBlueprint`, `EntityContentBlueprint` in `/alpha`).
+  - Backward-compatible with legacy Backstage systems (Classic `createRouter` and JSX `EntityPage.tsx`).
+- **Zero-Blink Stable UI**: Strict memoization and scalar hook dependencies guarantee smooth, flicker-free rendering and stable manual refreshes.
+- **Enterprise Security**:
+  - Custom TLS Certificate Authorities via file path or inline PEM strings.
+  - Basic Auth, API Keys, Bearer Tokens, and custom reverse-proxy headers.
+  - Safe credential redaction preventing secret leakage to browsers.
+- **Built-in Mock Clusters Daemon**: Instant local development and testing with simulated OpenSearch 3.x and Elasticsearch 9.x clusters—no Docker or heavy JVM setup required.
+
+---
+
+## Repository Structure
 
 ```
 backstage-opensearch-plugins/
+├── docs/                               # Comprehensive Documentation
+│   ├── getting-started/                # Installation and Quickstart guides
+│   ├── configuration/                  # app-config.yaml specification
+│   ├── catalog-integration/            # Entity YAML annotations
+│   ├── architecture/                   # Design overview and diagrams
+│   ├── troubleshooting/                # Common error resolutions
+│   └── images/                         # UI screenshots
 ├── plugins/
-│   ├── opensearch/                 # Frontend plugin (@lockum/opensearch-plugin)
-│   └── opensearch-backend/         # Backend plugin (@lockum/opensearch-plugin-backend)
+│   ├── opensearch-backend/             # Backend plugin package
+│   │   ├── src/
+│   │   │   ├── service/router.ts       # Express router & endpoints
+│   │   │   ├── service/SearchClusterClient.ts # Upstream cluster client
+│   │   │   ├── plugin.ts               # New Backend System entrypoint
+│   │   │   └── schema.ts               # Zod validation schemas
+│   └── opensearch/                     # Frontend plugin package
+│       ├── src/
+│       │   ├── api/                    # ApiRef & SearchClusterClient
+│       │   ├── components/             # Overview Card, Cluster Grid, Indices Table
+│       │   └── alpha.tsx               # New Frontend System declarative blueprints
 ├── scripts/
-│   ├── run-all-tests.mjs           # Unified test runner
-│   └── ts-loader.mjs               # TypeScript & TSX ESM loader
-├── app-config.example.yaml         # Sample Backstage cluster configuration
-├── catalog-info.example.yaml       # Sample Catalog entity annotations
-└── package.json                    # Workspace root
+│   ├── mock-clusters.mjs               # Standalone ES 9.x & OS 3.x mock server
+│   ├── run-all-tests.mjs               # Test suite runner
+│   └── test-live-instances.mjs         # E2E integration test runner
+└── README.md
 ```
 
 ---
 
-## 📦 Packages
+## Quick Installation
 
-| Package | Directory | Role | Description |
-| :--- | :--- | :--- | :--- |
-| **`@lockum/opensearch-plugin`** | `plugins/opensearch` | Frontend | React UI components (`EntitySearchOverviewCard`, `EntitySearchContent`), status badges, and dynamic branding. |
-| **`@lockum/opensearch-plugin-backend`** | `plugins/opensearch-backend` | Backend | Backstage New Backend System plugin with TLS, basic auth, timeouts, caching, and cluster stats aggregation. |
+### 1. Install Packages
+```bash
+# In your Backstage repository
+yarn --cwd packages/backend add @lockum/opensearch-plugin-backend
+yarn --cwd packages/app add @lockum/opensearch-plugin
+```
 
----
+### 2. Enable in Backend
+In `packages/backend/src/index.ts`:
+```typescript
+backend.add(import('@lockum/opensearch-plugin-backend'));
+```
 
-## 🚀 Key Features
+### 3. Enable in Frontend
+In `packages/app/src/App.tsx`:
+```typescript
+import opensearchPlugin from '@lockum/opensearch-plugin/alpha';
 
-- **Dual-Engine Compatibility**: Full support for both **Elasticsearch** (7.x, 8.x) and **OpenSearch** (1.x, 2.x, 3.x).
-- **Dynamic Entity Branding**:
-  - Automatically identifies engine from annotations (`es_instance` vs `os_instance`).
-  - Sets appropriate titles (**`Elasticsearch`** vs **`OpenSearch`**) and badges.
-- **Cluster Health Status Indicators**:
-  - `green` -> Green badge (`StatusOK` / `#2e7d32`).
-  - `yellow` -> Amber badge (`StatusWarning` / `#ed6c02`).
-  - `red` -> Red badge (`StatusError` / `#d32f2f`).
-- **Resource Usage Metrics**: Total disk space, available disk, utilization percentage with progress bar, indices store size, total document counts, and JVM heap.
-- **Top 7 Recent Indices**: Queries cluster `_cat/indices`, sorts descending by creation date, and slices to the top 7 indices matching `index_name`.
-- **Resilient Upstream Protection**: Enforced timeouts (default 8000ms), safe error handling for non-matching patterns (`index_not_found_exception` -> empty table rather than 500), and credential protection.
-- **New Backstage Backend System**: Built directly using `createBackendPlugin` and `coreServices`.
+export default createApp({
+  features: [
+    /* ... */
+    opensearchPlugin,
+  ],
+});
+```
 
----
-
-## ⚙️ Configuration (`app-config.yaml`)
-
-Define search cluster instances in your Backstage `app-config.yaml`:
-
+### 4. Configure `app-config.yaml`
 ```yaml
 searchClusters:
   instances:
-    # Example 1: Elasticsearch cluster with inline TLS certificate & Basic Auth
-    - name: sesdev01
-      type: elasticsearch # 'elasticsearch' | 'opensearch'
-      url: https://sesdev01.internal.example.com:9200
-      auth:
-        username: ${ELASTIC_USERNAME} # Optional
-        password: ${ELASTIC_PASSWORD} # Optional
-      tls:
-        ca: | # Optional: Inline PEM certificate or path to .crt/.pem file
-          -----BEGIN CERTIFICATE-----
-          MIIB...SAMPLE...CERTIFICATE...==
-          -----END CERTIFICATE-----
-        rejectUnauthorized: true # Set to false only for dev/self-signed
-      requestTimeoutMs: 8000
-
-    # Example 2: OpenSearch cluster using file path for CA certificate
     - name: sesos01
       type: opensearch
-      url: https://opensearch.internal.example.com:9200
+      url: https://opensearch.corp.internal:9200
       auth:
-        username: ${OPENSEARCH_USERNAME}
-        password: ${OPENSEARCH_PASSWORD}
-      tls:
-        ca: /etc/ssl/certs/opensearch-ca.pem
-        rejectUnauthorized: true
-      requestTimeoutMs: 5000
+        username: ${OPENSEARCH_USER}
+        password: ${OPENSEARCH_PASS}
+
+    - name: sesdev01
+      type: elasticsearch
+      url: https://es9.corp.internal:9200
+      apiKey: ${ELASTICSEARCH_API_KEY}
 ```
 
----
-
-## 🏷️ Entity Annotations (`catalog-info.yaml`)
-
-Components opt in to cluster monitoring via metadata annotations:
-
+### 5. Annotate Your Entity
+In `catalog-info.yaml`:
 ```yaml
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: payment-consumer
+  name: search-service
   annotations:
-    # Specify EITHER es_instance OR os_instance:
-    es_instance: sesdev01
-    # os_instance: sesos01
-
-    # Index pattern to query (supports wildcards):
-    index_name: consumer-index*
+    os_instance: sesos01       # Or es_instance: sesdev01
+    index_name: search-*       # Monitored index wildcard pattern
 spec:
   type: service
+  owner: team-search
   lifecycle: production
-  owner: team-payments
 ```
 
 ---
 
-## 🧪 Testing
+## Local Development & Testing
 
-Run the full automated test suite:
-
+### 1. Start the Mock Cluster Daemon
 ```bash
-# Run all frontend and backend tests
-yarn test
-
-# Run backend unit & integration tests
-yarn test:backend
-
-# Run frontend unit & component tests
-yarn test:frontend
-
-# Run strict TypeScript type check
-npx tsc --noEmit
+yarn mock:clusters
 ```
+*Starts simulated Elasticsearch 9.0.1 on `http://127.0.0.1:9200` and OpenSearch 3.0.0 on `http://127.0.0.1:9201`.*
+
+### 2. Run the Test Suites
+```bash
+yarn test
+```
+Runs 31 unit and integration tests across backend configuration, TLS handling, router endpoints, formatters, and frontend components.
 
 ---
 
-## 📄 License
+## Documentation
 
-Apache-2.0
+Explore the complete documentation in the [`docs/`](./docs/README.md) directory:
+- [Installation Guide (New & Legacy Systems)](./docs/getting-started/installation.md)
+- [5-Minute Quickstart](./docs/getting-started/quickstart.md)
+- [Configuration Reference (`app-config.yaml`)](./docs/configuration/app-config.md)
+- [Catalog Annotations Reference](./docs/catalog-integration/annotations.md)
+- [Architecture & Design Overview](./docs/architecture/overview.md)
+- [Troubleshooting & FAQ](./docs/troubleshooting/faq.md)
+
+---
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
