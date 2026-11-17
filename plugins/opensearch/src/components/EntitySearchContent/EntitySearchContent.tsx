@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -32,6 +32,17 @@ const useStyles = makeStyles(theme => ({
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
+  spinning: {
+    animation: '$spin 1s linear infinite',
+  },
+  '@keyframes spin': {
+    '0%': {
+      transform: 'rotate(0deg)',
+    },
+    '100%': {
+      transform: 'rotate(360deg)',
+    },
+  },
 }));
 
 export const EntitySearchContent = (): JSX.Element | null => {
@@ -39,16 +50,21 @@ export const EntitySearchContent = (): JSX.Element | null => {
   const { entity } = useEntity();
   const api = useApi(searchClusterApiRef);
 
-  const clusterConfig = getSearchClusterConfig(entity);
+  // Memoize clusterConfig so reference remains stable across renders
+  const clusterConfig = useMemo(() => getSearchClusterConfig(entity), [entity]);
   const engineTitle = getSearchClusterTitle(entity);
+
+  const instanceName = clusterConfig?.instanceName;
+  const indexPattern = clusterConfig?.indexPattern;
 
   const [summary, setSummary] = useState<SearchClusterSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Stable callback depending only on primitive strings
   const loadData = useCallback(async (isRefresh = false) => {
-    if (!clusterConfig) {
+    if (!instanceName) {
       setLoading(false);
       return;
     }
@@ -62,8 +78,8 @@ export const EntitySearchContent = (): JSX.Element | null => {
 
     try {
       const data = await api.getSummary({
-        instanceName: clusterConfig.instanceName,
-        indexPattern: clusterConfig.indexPattern,
+        instanceName,
+        indexPattern,
       });
       setSummary(data);
     } catch (err) {
@@ -72,7 +88,7 @@ export const EntitySearchContent = (): JSX.Element | null => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [api, clusterConfig]);
+  }, [api, instanceName, indexPattern]);
 
   useEffect(() => {
     loadData();
@@ -102,7 +118,7 @@ export const EntitySearchContent = (): JSX.Element | null => {
           <Button
             variant="contained"
             color="primary"
-            startIcon={<RefreshIcon />}
+            startIcon={<RefreshIcon className={refreshing ? classes.spinning : undefined} />}
             onClick={() => loadData(true)}
             disabled={loading || refreshing}
           >
@@ -138,13 +154,22 @@ export const EntitySearchContent = (): JSX.Element | null => {
               </Grid>
             )}
 
-            {/* Recent Indices Table if index pattern is configured or if indices exist */}
-            {clusterConfig.indexPattern && (
+            {/* Recent Indices Table if indices exist */}
+            {summary.indices && summary.indices.length > 0 && (
               <Grid item xs={12} className={classes.section}>
                 <RecentIndicesTable
                   indices={summary.indices}
                   indexPattern={clusterConfig.indexPattern}
                 />
+              </Grid>
+            )}
+
+            {/* If pattern was provided but no indices returned */}
+            {clusterConfig.indexPattern && (!summary.indices || summary.indices.length === 0) && (
+              <Grid item xs={12} className={classes.section}>
+                <Alert severity="warning">
+                  No indices currently match the pattern &quot;{clusterConfig.indexPattern}&quot; in cluster <code>{clusterConfig.instanceName}</code>.
+                </Alert>
               </Grid>
             )}
           </Grid>
