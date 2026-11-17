@@ -1,0 +1,41 @@
+app:
+  title: Backstage Example App
+  baseUrl: http://localhost:3000
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+  cors:
+    origin: http://localhost:3000
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+
+searchClusters:
+  instances:
+    # Example 1: Elasticsearch cluster using inline TLS CA certificate
+    - name: sesdev01
+      type: elasticsearch # 'elasticsearch' | 'opensearch'
+      url: https://sesdev01.internal.example.com:9200
+      auth:
+        username: ${ELASTIC_USERNAME} # Optional
+        password: ${ELASTIC_PASSWORD} # Optional
+      tls:
+        ca: | # Optional: Inline PEM certificate or path to .crt/.pem file
+          -----BEGIN CERTIFICATE-----
+          MIIB...SAMPLE...CERTIFICATE...==
+          -----END CERTIFICATE-----
+        rejectUnauthorized: true # Set to false only for local testing / self-signed
+      requestTimeoutMs: 8000
+
+    # Example 2: OpenSearch cluster using file path for CA certificate
+    - name: sesos01
+      type: opensearch
+      url: https://opensearch.internal.example.com:9200
+      auth:
+        username: ${OPENSEARCH_USERNAME}
+        password: ${OPENSEARCH_PASSWORD}
+      tls:
+        ca: /etc/ssl/certs/opensearch-ca.pem
+        rejectUnauthorized: true
+      requestTimeoutMs: 5000

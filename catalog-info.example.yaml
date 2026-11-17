@@ -1,0 +1,29 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-consumer-service
+  description: Example service ingesting payments with Elasticsearch index monitoring
+  annotations:
+    # Specify EITHER es_instance OR os_instance
+    es_instance: sesdev01
+    # os_instance: sesos01
+
+    # Index pattern to query (supports wildcards)
+    index_name: consumer-index*
+spec:
+  type: service
+  lifecycle: production
+  owner: team-payments
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: search-indexing-worker
+  description: Example worker using OpenSearch cluster with no specific index pattern
+  annotations:
+    # OpenSearch cluster instance
+    os_instance: sesos01
+spec:
+  type: service
+  lifecycle: production
+  owner: team-search

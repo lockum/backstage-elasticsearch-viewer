@@ -1,0 +1,1 @@
+export { EntitySearchOverviewCard } from './EntitySearchOverviewCard';
