@@ -75,9 +75,29 @@ backstage-opensearch-plugins/
 
 ## Quick Installation
 
-### 1. Install Packages
+Depending on your distribution preference, you can integrate the plugins directly from source into your Backstage monorepo or install from NPM:
+
+### Option A: Direct Workspace Copy (Recommended for Git Monorepos)
+Backstage natively discovers plugins placed under the `plugins/` directory:
+
+1. Copy the plugin folders into your target Backstage repository:
+   ```bash
+   cp -r /path/to/backstage-opensearch-plugins/plugins/opensearch <backstage-app>/plugins/
+   cp -r /path/to/backstage-opensearch-plugins/plugins/opensearch-backend <backstage-app>/plugins/
+   ```
+
+2. Add workspace dependencies to `packages/app/package.json` and `packages/backend/package.json`:
+   ```bash
+   # In packages/app/package.json:
+   #   "@lockum/opensearch-plugin": "workspace:^"
+   # In packages/backend/package.json:
+   #   "@lockum/opensearch-plugin-backend": "workspace:^"
+
+   yarn install
+   ```
+
+### Option B: NPM Registry (If Published to NPM)
 ```bash
-# In your Backstage repository
 yarn --cwd packages/backend add @lockum/opensearch-plugin-backend
 yarn --cwd packages/app add @lockum/opensearch-plugin
 ```

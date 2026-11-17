@@ -36,17 +36,36 @@ Examine `packages/app/src/App.tsx`:
 
 ## 3. Phase 2: Install Package Dependencies
 
-Run the package manager commands from the Backstage root directory:
+The agent should check whether the plugins are already published to NPM or should be linked locally from this repository:
+
+### Method A: Monorepo Workspace / Direct Copy (Recommended if not yet published to NPM)
+Backstage projects include `"plugins/*"` in their root `package.json` workspaces.
+Copy the two plugin directories into the requestor's `plugins/` directory:
 
 ```bash
-# Add backend plugin to packages/backend
-yarn --cwd packages/backend add @lockum/opensearch-plugin-backend
+# 1. Ensure target has a plugins/ directory:
+mkdir -p <target-backstage-root>/plugins
 
-# Add frontend plugin to packages/app
-yarn --cwd packages/app add @lockum/opensearch-plugin
+# 2. Copy plugins from this repo:
+cp -r <this-repo>/plugins/opensearch <target-backstage-root>/plugins/
+cp -r <this-repo>/plugins/opensearch-backend <target-backstage-root>/plugins/
+
+# 3. Add workspace dependencies:
+# In <target-backstage-root>/packages/app/package.json -> dependencies:
+#   "@lockum/opensearch-plugin": "workspace:^"
+# In <target-backstage-root>/packages/backend/package.json -> dependencies:
+#   "@lockum/opensearch-plugin-backend": "workspace:^"
+
+# 4. Link workspace dependencies:
+yarn install
 ```
 
-*(If the plugins are imported as monorepo local workspaces, add `"@lockum/opensearch-plugin-backend": "workspace:^"` to `packages/backend/package.json` and `"@lockum/opensearch-plugin": "workspace:^"` to `packages/app/package.json`)*
+### Method B: Public NPM Registry (If Published)
+If the requestor has published `@lockum/*` to npmjs.org:
+```bash
+yarn --cwd packages/backend add @lockum/opensearch-plugin-backend
+yarn --cwd packages/app add @lockum/opensearch-plugin
+```
 
 ---
 

@@ -2,9 +2,18 @@
 
 This guide covers installing and configuring the **OpenSearch & Elasticsearch Backstage Plugin Suite** in any Backstage instance.
 
-The plugin suite consists of two packages:
-- **`@lockum/opensearch-plugin-backend`**: Backend service that connects to clusters, normalizes metrics, and handles authentication/TLS.
-- **`@lockum/opensearch-plugin`**: Frontend plugin delivering the Overview Card and dedicated Search Cluster dashboard.
+---
+
+## Package Status & Installation Options
+
+The plugins are organized as a monorepo containing two packages:
+- **`@lockum/opensearch-plugin-backend`**: Backend service connecting to clusters, handling TLS CA certificates, and normalizing metrics.
+- **`@lockum/opensearch-plugin`**: Frontend plugin delivering the Overview Health Card and the `/search-cluster` dashboard.
+
+Choose the installation method that fits your environment:
+- **Option 1 (Recommended for Custom / Internal Deployments)**: Clone / Copy into Backstage `plugins/` directory.
+- **Option 2 (Git Submodule)**: Link directly as a Git submodule.
+- **Option 3 (NPM Registry)**: Install via `yarn add` if publishing to NPM.
 
 ---
 
@@ -22,17 +31,61 @@ Provides comprehensive telemetry, memory/JVM breakdown, and recent indices inspe
 
 ---
 
-## Prerequisites
+## Step 1: Install the Plugins
 
-- Node.js `18.x`, `20.x`, or `22.x+`
-- A Backstage application (Backstage `1.24+` recommended)
-- Network access from the Backstage backend to your Elasticsearch or OpenSearch cluster(s)
+### Option 1: Copy to your Backstage `plugins/` Directory (Recommended)
+
+In Backstage apps, the standard `package.json` configures workspaces as:
+```json
+"workspaces": [
+  "packages/*",
+  "plugins/*"
+]
+```
+Any folder placed in `plugins/` is automatically discovered and linked as a workspace package.
+
+1. Clone or copy the plugin folders into your Backstage repository:
+   ```bash
+   # From your Backstage root directory:
+   mkdir -p plugins
+
+   # If you cloned this repo to /tmp/search-plugins:
+   cp -r /path/to/backstage-opensearch-plugins/plugins/opensearch plugins/
+   cp -r /path/to/backstage-opensearch-plugins/plugins/opensearch-backend plugins/
+   ```
+
+2. Add the workspace dependencies to your app and backend:
+   ```bash
+   # In packages/app/package.json dependencies:
+   # "@lockum/opensearch-plugin": "workspace:^"
+
+   # In packages/backend/package.json dependencies:
+   # "@lockum/opensearch-plugin-backend": "workspace:^"
+
+   # Run yarn to link the workspaces
+   yarn install
+   ```
 
 ---
 
-## Step 1: Install Packages
+### Option 2: Git Submodule
 
-In your Backstage root directory:
+If you keep the plugins in a separate repository on GitHub (e.g. `https://github.com/lockum/backstage-opensearch-plugins`):
+
+```bash
+# Add as a submodule in plugins/search-plugins
+git submodule add https://github.com/lockum/backstage-opensearch-plugins.git plugins/search-plugins
+
+# Ensure your root package.json includes "plugins/**" in workspaces:
+# "workspaces": ["packages/*", "plugins/*", "plugins/search-plugins/plugins/*"]
+yarn install
+```
+
+---
+
+### Option 3: Official NPM Registry (If Published)
+
+If the package maintainer publishes the packages to the public NPM registry:
 
 ```bash
 # Add backend plugin to packages/backend
@@ -42,7 +95,22 @@ yarn --cwd packages/backend add @lockum/opensearch-plugin-backend
 yarn --cwd packages/app add @lockum/opensearch-plugin
 ```
 
-*(If developing locally within a monorepo, you can link them via `workspace:^` in `package.json`.)*
+#### How to Publish to NPM (For Maintainers)
+To make the packages installable via `yarn add @lockum/...`:
+```bash
+# 1. Log in to npm under the lockum scope or user account
+npm login
+
+# 2. Build and publish backend
+cd plugins/opensearch-backend
+yarn build
+npm publish --access public
+
+# 3. Build and publish frontend
+cd ../opensearch
+yarn build
+npm publish --access public
+```
 
 ---
 
@@ -89,7 +157,7 @@ And in `packages/backend/src/index.ts`:
 ```typescript
 import opensearch from './plugins/opensearch';
 
-// Inside makeCreateEnv or root router setup:
+// Inside router mounting:
 const opensearchEnv = useHotMemoize(previous => createEnv('opensearch'));
 apiRouter.use('/opensearch', await opensearch(opensearchEnv));
 ```
@@ -100,7 +168,7 @@ apiRouter.use('/opensearch', await opensearch(opensearchEnv));
 
 ### Modern Backstage (New Frontend System / Declarative Integration)
 
-In `packages/app/src/App.tsx`, simply include the plugin in your `createApp` features:
+In `packages/app/src/App.tsx`, include the plugin in your `createApp` features:
 
 ```typescript
 import { createApp } from '@backstage/frontend-defaults';
