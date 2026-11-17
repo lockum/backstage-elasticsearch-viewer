@@ -28,6 +28,7 @@ export interface ClusterHealth {
  */
 export interface ClusterVersion {
   number: string;
+  majorVersion?: number;
   buildFlavor?: string;
   buildType?: string;
   distribution?: string; // e.g. 'opensearch'

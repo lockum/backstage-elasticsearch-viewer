@@ -76,7 +76,7 @@ export class SearchClusterClient {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const headers: Record<string, string> = {
-      Accept: 'application/json',
+      Accept: 'application/vnd.elasticsearch+json;compatible-with=8, application/json;q=0.9, */*;q=0.8',
       'User-Agent': 'backstage-search-cluster-plugin/1.0',
     };
 
@@ -178,9 +178,12 @@ export class SearchClusterClient {
   async getVersion(): Promise<ClusterVersion> {
     const data = await this.request<any>('/');
     const v = data?.version || {};
+    const versionStr = String(v.number || 'unknown');
+    const major = Number.parseInt(versionStr.split('.')[0], 10);
 
     return {
-      number: String(v.number || 'unknown'),
+      number: versionStr,
+      majorVersion: Number.isNaN(major) ? undefined : major,
       distribution: v.distribution ? String(v.distribution) : undefined,
       buildFlavor: v.build_flavor ? String(v.build_flavor) : undefined,
       buildType: v.build_type ? String(v.build_type) : undefined,
@@ -196,10 +199,14 @@ export class SearchClusterClient {
     const jvm = nodes.jvm?.mem || {};
 
     const totalBytes = Number(fs.total_in_bytes ?? 0);
-    const availableBytes = Number(fs.available_in_bytes ?? 0);
+    const availableBytes = Number(fs.available_in_bytes ?? fs.free_in_bytes ?? 0);
     const usedBytes = Math.max(0, totalBytes - availableBytes);
     const usedPercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
-    const indicesStoreSizeBytes = Number(indices.store?.size_in_bytes ?? 0);
+    const indicesStoreSizeBytes = Number(
+      indices.store?.size_in_bytes ??
+        indices.store?.total_data_set_size_in_bytes ??
+        0,
+    );
     const totalDocs = Number(indices.docs?.count ?? 0);
 
     const jvmHeapUsedBytes = jvm.heap_used_in_bytes ? Number(jvm.heap_used_in_bytes) : undefined;

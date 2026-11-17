@@ -102,8 +102,60 @@ describe('SearchClusterClient', () => {
     const version = await client.getVersion();
 
     assert.equal(version.number, '2.11.1');
+    assert.equal(version.majorVersion, 2);
     assert.equal(version.distribution, 'opensearch');
     assert.equal(version.luceneVersion, '9.7.0');
+  });
+
+  it('correctly supports and identifies Elasticsearch 9.x', async () => {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          name: 'es9-node-1',
+          cluster_name: 'production-es9',
+          version: {
+            number: '9.0.1',
+            build_flavor: 'default',
+            build_type: 'tar',
+            lucene_version: '10.1.0',
+          },
+          tagline: 'You Know, for Search',
+        }),
+        { status: 200 },
+      );
+
+    const client = new SearchClusterClient(dummyEsConfig);
+    const version = await client.getVersion();
+
+    assert.equal(version.number, '9.0.1');
+    assert.equal(version.majorVersion, 9);
+    assert.equal(version.luceneVersion, '10.1.0');
+  });
+
+  it('correctly supports and identifies OpenSearch 3.x latest', async () => {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          name: 'opensearch-3-node',
+          cluster_name: 'production-os3',
+          version: {
+            distribution: 'opensearch',
+            number: '3.0.0',
+            build_type: 'tar',
+            lucene_version: '10.0.0',
+          },
+          tagline: 'The OpenSearch Project: https://opensearch.org/',
+        }),
+        { status: 200 },
+      );
+
+    const client = new SearchClusterClient(dummyOsConfig);
+    const version = await client.getVersion();
+
+    assert.equal(version.number, '3.0.0');
+    assert.equal(version.majorVersion, 3);
+    assert.equal(version.distribution, 'opensearch');
+    assert.equal(version.luceneVersion, '10.0.0');
   });
 
   it('calculates cluster storage and JVM stats from _cluster/stats', async () => {

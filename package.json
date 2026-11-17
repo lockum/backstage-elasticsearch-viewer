@@ -13,6 +13,7 @@
     "test": "node scripts/run-all-tests.mjs",
     "test:backend": "yarn workspace @lockum/opensearch-plugin-backend test",
     "test:frontend": "yarn workspace @lockum/opensearch-plugin test",
+    "test:live": "node --loader ./scripts/ts-loader.mjs scripts/test-live-instances.mjs",
     "clean": "rm -rf dist dist-types node_modules plugins/*/dist plugins/*/dist-types"
   },
   "devDependencies": {
