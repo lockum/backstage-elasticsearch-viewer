@@ -25,8 +25,9 @@ export const opensearchPlugin = createBackendPlugin({
         });
 
         httpRouter.use(router);
+        // Allow unauthenticated access for cluster monitoring endpoints
         httpRouter.addAuthPolicy({
-          path: '/health',
+          path: '/',
           allow: 'unauthenticated',
         });
       },
